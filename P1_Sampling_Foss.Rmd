@@ -1,0 +1,52 @@
+---
+title: "Sampling_Foss"
+output: html_document
+---
+```{r}
+sfoss <- read.table("obtaining_LONI_outputs\\shreya_foss_errorfixed.log", head = TRUE)
+
+library(FossilSim)
+
+sampFBD <- function(n_extant, n_trees, df,  mu, lambda, psi, rows, mers) {
+  m1 <- c(df [rows, mu]) ## from data frame, get values of mu from some row
+  # print(m1)
+  l1 <- c(df [rows, lambda])
+  p1 <- c(df [rows, psi]) 
+  modelledfoss <- sim.fbd.rateshift.taxa(n_extant, n_trees, l1, m1, p1, mers, complete = TRUE)
+    return(modelledfoss)
+    
+}
+
+
+sampFBD(666, 1, sfoss, "mu", "lambda", "psi.1.", c(1), c(61)) #sfoss containing the rows in mu, lambda, etc. 
+
+#sfoss$psi.1.
+#View(sfoss$psi.1.)
+```
+
+
+**older code**
+ - returns an asymmetric tree (see notes)
+```{r}
+#library(FossilSim)
+apply_model <- function(df, r1) {
+  
+  
+  mu <- df$mu[r1]
+  lambda <- df$lambda[r1]
+  psi <- df$psi.1.[r1]
+  
+#combined_values <- c(mu_s, lambda_s, psi_s)
+  
+  foss_model <- sim.fbd.rateshift.taxa(666, 1, lambda, mu, psi, times = c(61))
+  
+  #return(foss_model) 
+  
+  return(rangeplot.asymmetric(foss_model[[1]]))
+  
+}
+
+apply_model(sfoss, 124)
+
+```
+
