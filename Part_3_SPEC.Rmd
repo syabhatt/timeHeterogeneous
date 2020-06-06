@@ -1,0 +1,116 @@
+---
+title: "Part_3_SPEC"
+output: html_document
+---
+---
+title: "Part_3_SummaryStatistics"
+output: html_document
+---
+https://www.rdocumentation.org/packages/FossilSim/versions/2.1.1
+
+
+```{r}
+getwd()
+mynewfoss <- read.table("C:\\Users\\shrey\\Desktop\\WrightLab\\shreya_foss_3.log", head = TRUE)
+library(FossilSim)
+```
+
+for each i that is in the sequence psi, you execute the code chunk: append/add to p1 the column i from the data frame
+```{r}
+SFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
+  lmu <- length(c(mu))
+  lla <- length(c(lambda))
+  lps <- length(c(psi))
+  num <- max(c(lmu, lla, lps))
+  
+  if(length(mu) == 1){
+    m1 <- rep(df[row, mu], times = num)} else{ 
+      m1 <- c()
+      for(i in mu){m1 <- append(m1, df[row, i])}}
+  
+  if(length(lambda) == 1){
+    l1 <- rep(df[row, lambda], times = num)} else{
+      l1 <- c()
+      for(i in lambda){l1 <- append(l1, df[row, i])}}
+  
+  if(length(psi) == 1){
+    p1 <- rep(df[row, psi], times = num)} else{
+      p1 <- c()
+      for(i in psi){p1 <- append(p1, df[row, i])}} #add to p1
+  
+  modelledfoss <- sim.fbd.rateshift.taxa(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE)
+  return(modelledfoss)
+}
+result <- SFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
+```
+Output for phylo object looks like: 
+
+Phylogenetic tree with 677 tips and 676 internal nodes.
+
+Tip labels:
+	t477_1, t553_1, t51_1, t69_1, t255_1, t186_1, ...
+
+Rooted; includes branch lengths.
+----------------------------------------------------------------
+
+**sim.fbd.rateshift.taxa simulates fossilized birth death trees (FBD) w/ incorporated rate shifts
+*output is SAtrees with n extant sampled tips - got a LIST of phylo objects. Therefore, 'result' is an object of the class phylo
+
+http://www.phytools.org/eqg/Exercise_3.2/ to help understand what a phylo object is
+```{r}
+str(result) #structure of result - what's in it
+class(result) #is a "list"
+str(result[[1]]$edge) #num [1:1366, 1:2] 685 686 950...
+```
+
+Functions this week: (1)count.fossils; (2)count.fossils.binned; (3)tree.max
+(1) and (2) takes on fossils object. 
+So, create a fossil record object
+
+
+```{r}
+fossils_func <- function(data) {
+  return(fossils(result, from.taxonomy = F))
+}
+
+df <- data.frame(c('fossils_func'), stringsAsFactors = F)
+do.call('[' result, 685)['edge'] # as if extracting: result[[1]]$edge
+#want to put it in a dataframe MAYBE
+```
+
+```{r}
+my_df <- lapply(result, "[", c('edge', 'tip.label', 'edge.length'))
+
+#edge = result[[1]][["edge"]],
+#sp = result[[1]][["tip.label"]],
+#hmin = min(result[[1]][["edge.length"]]),
+#hmax = max(result[[1]][["edge.length"]])
+```
+
+```{r}
+fossils (data = result[[1]], from.taxonomy = FALSE)
+as.fossils(data = df, from.taxonomy = FALSE)
+is.fossils(result)
+```
+(1) count.fossils : count the total number of fossils
+    	-count.fossils(fossils object)
+      -output: number of extinct samples
+- count.fossils.binned : count the total number of fossils per interval
+	Count.fossils.binned(fossils, interval.ages)
+		Interval.ages: vector of interval ages, starting with the min age of the youngest interval and ending w the maximum age of the oldest interval
+		Output: vector of extinct samples corresponding to each interval. Note the last value corresponds to the number of samples > max age of the oldest interval.
+
+```{r}
+count.fossils(result[[1]]) #output 0
+count.fossils.binned(result[[1]], c(0,61)) #output 0,0
+
+
+```
+
+(3) tree.max : find the maximum age in a phylo object (root age/origin time)
+	- Tree.max(t_the_phylo_object, root.edge = F/T). 
+		    - If true, includes the root edge (which we have in result)
+	- Output: max age/origin time/root edge (when TRUE)
+```{r}
+tree.max(result[[1]], root.edge = TRUE) #output 91.89
+```
