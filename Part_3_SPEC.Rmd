@@ -7,6 +7,7 @@ title: "Part_3_SummaryStatistics"
 output: html_document
 ---
 https://www.rdocumentation.org/packages/FossilSim/versions/2.1.1
+[Paper about FossilSim]https://doi.org/10.1111/2041-210X.13170
 
 
 ```{r}
@@ -61,6 +62,10 @@ http://www.phytools.org/eqg/Exercise_3.2/ to help understand what a phylo object
 str(result) #structure of result - what's in it
 class(result) #is a "list"
 str(result[[1]]$edge) #num [1:1366, 1:2] 685 686 950...
+
+#More about the rateshift function, can be viewed as follows: function w/o the brackets
+sim.fbd.rateshift.taxa
+View(sim.fbd.rateshift.taxa) 
 ```
 
 Functions this week: (1)count.fossils; (2)count.fossils.binned; (3)tree.max
@@ -75,6 +80,7 @@ is.fossils(result)
 ```
 
 Error, cannot coerce class 'c("SAtree",..) to a data.frame
+So, this chunk is a bunch of bleh. Then the functions. Lastly, looking at printing the fossils object directly from the sim.fbd.rateshift.taxa() functions
 ```{r}
 fossils_func <- function(data) {
   return(fossils(result, from.taxonomy = F))
@@ -103,8 +109,6 @@ df_two <- ldply(result[[1]], data.frame) #a messy df:col names switched w rows
 #data.frame(..., row.names = [result[[1]], ])
 ```
 
-
-
 (1) count.fossils : Counts the total number of fossils
     	- count.fossils(fossils object). Input is dataframe or list
       - output: Number of extinct samples
@@ -116,15 +120,92 @@ df_two <- ldply(result[[1]], data.frame) #a messy df:col names switched w rows
 ```{r}
 count.fossils(result[[1]]) #output 0
 count.fossils.binned(result[[1]], c(0,61)) #output 0,0
-
-
 ```
 
+#Worked: tree.max
 (3) tree.max : find the maximum age in a phylo object (root age/origin time)
 	- Tree.max(t_the_phylo_object, root.edge = F/T). 
 		    - If true, includes the root edge (which we have in result)
 	- Output: max age/origin time/root edge (when TRUE)
+	
 ```{r}
 origin_time <- tree.max(result[[1]], root.edge = TRUE) #output numeric: 91.89
+```
+
+##sim.fbd.rateshift.taxa
+```{r}
+sfrt <- function (n, numbsim, lambda, mu, psi, times, complete = FALSE) 
+{
+  if (length(lambda) != length(times)) 
+    stop("Length mismatch between rate shift times and birth rates")
+  if (length(mu) != length(times)) 
+    stop("Length mismatch between rate shift times and death rates")
+  if (length(psi) != length(times)) 
+    stop("Length mismatch between rate shift times and sampling rates")
+  trees = TreeSim::sim.rateshift.taxa(n, numbsim, lambda, 
+    mu, rep(1, length(times)), times, complete = TRUE)
+  for (i in 1:length(trees)) {
+    t = trees[[i]]
+    origin = max(n.ages(t)) + t$root.edge
+    horizons = c(times, origin)
+    f <- sim.fossils.intervals(tree = t, interval.ages = horizons, 
+      rates = psi)
+    tree = SAtree.from.fossils(t, f)
+    node.ages = n.ages(tree)
+    if (complete == FALSE) {
+      fossil.tips = is.extinct(tree, tol = 1e-06)
+      sa.tips = tree$tip.label[tree$edge[, 2][(tree$edge[, 
+        2] %in% 1:length(tree$tip.label)) & (tree$edge.length == 
+        0)]]
+      unsampled.tips = fossil.tips[!(fossil.tips %in% 
+        sa.tips)]
+      tree = ape::drop.tip(tree, unsampled.tips)
+      node.ages = n.ages(tree)
+    }
+    trees[[i]] = tree
+    trees[[i]]$root.edge = origin - max(node.ages)
+    trees[[i]] = SAtree(trees[[i]], complete)
+  }
+  return(list(f, trees))
+}
+
+
 
 ```
+
+use sfrt: the modified sim.fbd.rateshift.taxa funcitons
+```{r}
+modifiedSFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
+  lmu <- length(c(mu))
+  lla <- length(c(lambda))
+  lps <- length(c(psi))
+  num <- max(c(lmu, lla, lps))
+  
+  if(length(mu) == 1){
+    m1 <- rep(df[row, mu], times = num)} else{ 
+      m1 <- c()
+      for(i in mu){m1 <- append(m1, df[row, i])}}
+  
+  if(length(lambda) == 1){
+    l1 <- rep(df[row, lambda], times = num)} else{
+      l1 <- c()
+      for(i in lambda){l1 <- append(l1, df[row, i])}}
+  
+  if(length(psi) == 1){
+    p1 <- rep(df[row, psi], times = num)} else{
+      p1 <- c()
+      for(i in psi){p1 <- append(p1, df[row, i])}} #add to p1
+  
+  modelledfoss <- sfrt(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE)
+  return(modelledfoss)
+}
+result <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
+```
+https://rdrr.io/cran/FossilSim/src/R/utils.R
+
+https://www.rdocumentation.org/packages/FossilSim/versions/2.1.1
+
+https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13170
+
+
+
