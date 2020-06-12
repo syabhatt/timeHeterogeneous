@@ -1,7 +1,4 @@
----
-title: "Part_3_SPEC"
-output: html_document
----
+
 ---
 title: "Part_3_SummaryStatistics"
 output: html_document
@@ -11,49 +8,10 @@ https://www.rdocumentation.org/packages/FossilSim/versions/2.1.1
 
 
 ```{r}
-getwd()
 mynewfoss <- read.table("C:\\Users\\shrey\\Desktop\\WrightLab\\shreya_foss_3.log", head = TRUE)
 library(FossilSim)
 ```
 
-ORIGINAL from PART 2
-for each i that is in the sequence psi, you execute the following: append/add to p1 the column i from the data frame
-```{r}
-SFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
-  lmu <- length(c(mu))
-  lla <- length(c(lambda))
-  lps <- length(c(psi))
-  num <- max(c(lmu, lla, lps))
-  
-  if(length(mu) == 1){
-    m1 <- rep(df[row, mu], times = num)} else{ 
-      m1 <- c()
-      for(i in mu){m1 <- append(m1, df[row, i])}}
-  
-  if(length(lambda) == 1){
-    l1 <- rep(df[row, lambda], times = num)} else{
-      l1 <- c()
-      for(i in lambda){l1 <- append(l1, df[row, i])}}
-  
-  if(length(psi) == 1){
-    p1 <- rep(df[row, psi], times = num)} else{
-      p1 <- c()
-      for(i in psi){p1 <- append(p1, df[row, i])}} #add to p1
-  
-  modelledfoss <- sim.fbd.rateshift.taxa(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE)
-  return(modelledfoss)
-}
-result <- SFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
-```
-Output for phylo object looks like: 
-
-Phylogenetic tree with 677 tips and 676 internal nodes.
-
-Tip labels:
-	t477_1, t553_1, t51_1, t69_1, t255_1, t186_1, ...
-
-Rooted; includes branch lengths.
-----------------------------------------------------------------
 
 **sim.fbd.rateshift.taxa** output is SAtrees with n extant sampled tips - got a LIST of phylo objects. Therefore, 'result' is an object of the class phylo
 http://www.phytools.org/eqg/Exercise_3.2/ to help understand what a phylo object is
@@ -72,7 +30,7 @@ Functions this week: (1)count.fossils; (2)count.fossils.binned; (3)tree.max
 
 IGNORE IGNORE: 
 ----------------------------------------------------------------
-So, create a fossil record object?
+tried: create a fossil record object
 ```{r}
 fossils (data = result[[1]], from.taxonomy = FALSE)
 as.fossils(data = df, from.taxonomy = FALSE)
@@ -95,7 +53,7 @@ is.data.frame(my_df) #false
 edge = result[[1]][["edge"]]
 sp = result[[1]][["tip.label"]]
 hmin = min(result[[1]][["edge.length"]])
-hmax = max(result[[1]][["edge.length"]])
+hmax
 #no idea where I was going w this
 library(plyr)
 df_two <- ldply(result[[1]], data.frame) #a messy df:col names switched w rows
@@ -104,6 +62,7 @@ df_two <- ldply(result[[1]], data.frame) #a messy df:col names switched w rows
 -----------------------------------------------------------------
 IGNORE ABOVE 
 
+#Not working yet
 (1) count.fossils : Counts the total number of fossils
     	- count.fossils(fossils object). Input is dataframe or list
       - output: Number of extinct samples
@@ -126,23 +85,19 @@ count.fossils.binned(result[[1]], c(0,61)) #output 0,0
 origin_time <- tree.max(result[[1]], root.edge = TRUE) #output numeric: 91.89
 ```
 
-printing the fossils object directly from the sim.fbd.rateshift.taxa() functions
-##sim.fbd.rateshift.taxa
+printing the fossils object directly from the sim.fbd.rateshift.taxa() function
 
-was getting trouble with n.ages (could not find func.). So as C said, went on FossilSim's github to find it: https://github.com/fossilsim/fossilsim/blob/master/R/utils.R
+
+Was getting trouble with n.ages (could not find func.). So as C said, went on FossilSim's github to find it: https://github.com/fossilsim/fossilsim/blob/master/R/utils.R
 ```{r}
 n.ages <- function(tree){
-
   depth = ape::node.depth.edgelength(tree)
   node.ages = max(depth) - depth
   names(node.ages) <- 1:(tree$Nnode+length(tree$tip))
-
   # adding possible offset if tree fully extinct
   if(!is.null(tree$root.time)) node.ages = node.ages + tree$root.time - max(node.ages)
-
   return(node.ages)
 }
-
 ```
 
 modify sim.fbd.rateshift.taxa to return a list of both fossils object(f) and the tree. Named sfrt
@@ -186,7 +141,7 @@ sfrt <- function (n, numbsim, lambda, mu, psi, times, complete = FALSE)
 }
 ```
 
-Use modified function sfrt to create func for our project (Part 2)
+Use modified function sfrt to create func for our project. Output, my_tree (Part 2)
 ```{r}
 modifiedSFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
   
@@ -207,7 +162,7 @@ modifiedSFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
       p1 <- c()
       for(i in psi){p1 <- append(p1, df[row, i])}} #add to p1
   
-  modelledfoss <- sfrt(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE)
+  modelledfoss <- sfrt(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE) #using sfrt
   return(modelledfoss)
 }
 my_tree <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
@@ -216,36 +171,66 @@ wooohoo it worked!
 
 now for the count.fossils and .binned
 ```{r}
-count.fossils(my_tree[[1]]) #output 17; 13; 16
-count.fossils.binned(my_tree[[1]], c(0,61)) #output 9, 8; 10, 3; 12,4
-origin_time <- tree.max(my_tree[[2]][[1]], root.edge = TRUE) #92.6
+count.fossils(my_tree[[1]]) # 24
+count.fossils.binned(my_tree[[1]], c(0,61)) #15,9
+origin_time <- tree.max(my_tree[[2]][[1]], root.edge = TRUE) #158
 ```
 remember tree.max already worked earlier as well...
 
-
-if needed: make a new column (average of h,):
-my_tree[[1]]$h <- ((my_tree[[1]]$hmin + my_tree[[1]]$hmax)/2)
-
-Put in func to print out all three func.
+Make a new column in my_tree (average of hmin and hmax):
 ```{r}
-summarystat <- function(tree, time)
-  
+my_tree[[1]]$h <- ((my_tree[[1]]$hmin + my_tree[[1]]$hmax)/2)
 ```
 
+## Making a func to print out all three summary stats
 
+### Attempt 1
+```{r}
 
+combined_summary <- function(tree, times) {
+    
+    total_foss <- count.fossils(tree[[1]])
+    interval_foss <- count.fossils.binned(tree[[1]], times)
+    origin_time <-  tree.max(tree[[2]][[1]])
+  
+    return(list(total_foss, interval_foss, origin_time))
+}
+summary <- combined_summary(my_tree, c(0, 61)) 
 
+```
+improvements: how to not have to write [[m]] or [[m + 1]]
 
+tried to change names of my_tree list... not a good idea
+then tried to see how else to index
 
+### Attempt 2
+First way to index was just use the numbers, like [[1]]. Can also use booleans (T for the element chosen, F for not)... 
+  problem, not reading the elements in the list when apply count.fossils. It's reading the [[1]], then   rows 1,2,3... instead of going directly to rows 1, 2,3... 
+EEP figured out! To access the list inside the fossils list, gotta do the two brackets [[]] and since there's only one list within, just have one logical.
+```{r}
+## my_tree[c(T,F)] # lists the first element/list in my_tree. BUT =/= my_tree[[1]]
 
+combined_summary2 <- function(tree, times) {
+  
+    total_foss = count.fossils(tree[[(T)]])
+    
+    interval_foss =  count.fossils.binned(tree[[(T)]], times)
+    
+    origin_time = tree.max(tree[c(F, T)] [[T]] [[T]] )
+    
+    my_list2 <- list(total_foss, interval_foss, origin_time)
+    
+    names(my_list2) <- c("total_fossils", "interval_fossils", "origin_time")
+  
+    return(my_list2)
+}
 
+summary2 <- combined_summary2(my_tree, c(0, 61))
+```
+omfg yay! Improvements: still messy, especailly the tree.max... 
 
+another way to name list (but messy looking): my_listNAMES <- (name1 = count_fossils,
+                     interval_foss = interval_fossils,
+                     origin_time = origin) 
 
-
-
-
-
-
-
-
-
+Could also list them out as a vector: c(total_foss, interval_foss, origin_time)
