@@ -1,9 +1,11 @@
 ---
-title: "P4_Creating_Histograms"
+title: "Part_4_CreateHistogram"
 output: html_document
 ---
 I think the the next thing to try is to make these iterable. So, I'd like you to produce a histogram of origin times found in simulations
 
-You could do that either by doing a simulation from a bunch of rows from the posterior trace or by simulating a bunch of trees from one row of the trace. Either way, do about a hundred simulations and make a histogram of them. Add a vertical line to the histogram at 131 million years - the empirical value uncovered in Christina's work. This will give us a visual check on the simulations
+**You could do that either by doing a simulation from a bunch of rows from the posterior trace or by simulating a bunch of trees from one row of the trace.**
+
+Either way, do about a hundred simulations and make a histogram of them. Add a vertical line to the histogram at 131 million years - the empirical value uncovered in Christina's work. This will give us a visual check on the simulations
 -get the origin for every hundred simulations
 -do that for the number of fossils too
