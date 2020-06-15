@@ -1,0 +1,178 @@
+---
+title: "Part_4_CreateHistogram"
+output: html_document
+---
+I think the the next thing to try is to make these iterable. So, I'd like you to produce a histogram of origin times found in simulations
+
+**You could do that either by doing a simulation from a bunch of rows from the posterior trace or by simulating a bunch of trees from one row of the trace.**
+
+Either way, do about a hundred simulations and make a histogram of them. Add a vertical line to the histogram at 131 million years - the empirical value uncovered in Christina's work. This will give us a visual check on the simulations
+-loop to get the origin for every hundred simulations
+-do that for the number of fossils too
+
+```{r}
+mynewfoss <- read.table("C:\\Users\\shrey\\Desktop\\WrightLab\\shreya_foss_3.log", head = TRUE)
+library(FossilSim)
+library(tidyverse)
+```
+
+Part of sim.fbd.rateshift.taxa
+```{r}
+n.ages <- function(tree){
+  depth = ape::node.depth.edgelength(tree)
+  node.ages = max(depth) - depth
+  names(node.ages) <- 1:(tree$Nnode+length(tree$tip))
+  # adding possible offset if tree fully extinct
+  if(!is.null(tree$root.time)) node.ages = node.ages + tree$root.time - max(node.ages)
+  return(node.ages)
+}
+```
+
+Modify sim.fbd.rateshift.taxa to return a list of both fossils object(f) and the tree. Named sfrt
+```{r}
+modifiedsfrt <- function (n, numbsim, lambda, mu, psi, times, complete = FALSE) 
+{
+  if (length(lambda) != length(times)) 
+    stop("Length mismatch between rate shift times and birth rates")
+  if (length(mu) != length(times)) 
+    stop("Length mismatch between rate shift times and death rates")
+  if (length(psi) != length(times)) 
+    stop("Length mismatch between rate shift times and sampling rates")
+  
+  trees = TreeSim::sim.rateshift.taxa(n, numbsim, lambda, 
+    mu, rep(1, length(times)), times, complete = TRUE)
+  
+  for (i in 1:length(trees)) {
+    t = trees[[i]]
+    origin = max(n.ages(t)) + t$root.edge
+    horizons = c(times, origin)
+    f <- sim.fossils.intervals(tree = t, interval.ages = horizons, 
+      rates = psi)
+    tree = SAtree.from.fossils(t, f)
+    node.ages = n.ages(tree)
+    
+    if (complete == FALSE) {
+      fossil.tips = is.extinct(tree, tol = 1e-06)
+      sa.tips = tree$tip.label[tree$edge[, 2][(tree$edge[, 
+        2] %in% 1:length(tree$tip.label)) & (tree$edge.length == 
+        0)]]
+      unsampled.tips = fossil.tips[!(fossil.tips %in% 
+        sa.tips)]
+      tree = ape::drop.tip(tree, unsampled.tips)
+      node.ages = n.ages(tree)
+    }
+    trees[[i]] = tree
+    trees[[i]]$root.edge = origin - max(node.ages)
+    trees[[i]] = SAtree(trees[[i]], complete)
+  }
+  
+  f$h <- (f$hmin + f$hmax) / 2
+  
+  return(list(f, trees))
+}
+```
+
+Use modified function sfrt to create func for our project (Part 2)
+```{r}
+modifiedSFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
+  
+  num <- max(c(length(mu), length(lambda), length(psi)))
+  
+  if(length(mu) == 1){
+    m1 <- rep(df[row, mu], times = num)} else{ 
+      m1 <- c()
+      for(i in mu){m1 <- append(m1, df[row, i])}}
+  
+  if(length(lambda) == 1){
+    l1 <- rep(df[row, lambda], times = num)} else{
+      l1 <- c()
+      for(i in lambda){l1 <- append(l1, df[row, i])}}
+  
+  if(length(psi) == 1){
+    p1 <- rep(df[row, psi], times = num)} else{
+      p1 <- c()
+      for(i in psi){p1 <- append(p1, df[row, i])}} #add to p1
+  
+  modelledfoss <- modifiedsfrt(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE) #using sfrt
+  return(modelledfoss)
+}
+#add for loop here!! See below stuff
+##resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
+```
+
+Game plan: 
+1. Simulate a bunch of trees from one row
+2. Apply tree.max to get the origin
+3. plot histogram. Remember ggplot2? maybe one of the geom thingys
+
+Problems to conquer: first gotta figure out how to run the sfrt over and over again
+1. run the sfrt func using row 224 a hundred times, store those in a vector?? 
+Here: simulated x number of trees from one row (the second option) and got the origin time for each. Resulting vector has x values.
+
+```{r}
+num_sims <- 100
+sim_output <- rep(NA, times = num_sims) #This creates a vector of num_sims NA values
+
+for(i in 1:num_sims){
+
+  resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
+  
+  origin_time <-  tree.max(resultFBD[[2]][[1]])
+  sim_output[i] <- origin_time
+}
+##sim_output
+
+df_sim_origintime <- data.frame(sim_output) #Put in data frame (to work for ggplot)
+
+```
+
+Incorporating fossil count, putting in one data frame (to see how the for loop works, see above chunk.). Basically removed the sim_output[i]
+```{r}
+num_sims <- 3
+origin_time <- rep(NA, times = num_sims) #This creates a vector of num_sims NA values
+total_foss <- rep(NA, times = num_sims) 
+
+
+for(i in 1:num_sims){
+
+  resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
+  
+  origin_time[i] <-  tree.max(resultFBD[[2]][[1]])
+  total_foss[i] <- count.fossils(resultFBD[[1]])
+  
+}
+
+my_df <- data.frame(origin_time, total_foss) #Put in data frame (to work for ggplot)
+```
+
+
+Now to make the histogram
+- on the -x axis
+- x = million of years ago; y = frequency/ number of samples
+- maybe a title?
+-vertical line on 131 myo
+  -needed to have a data frame input in ggplot, not a numerical vector. Which was a problem with sim_output (resolved)
+```{r}
+
+##hist(sim_output) also gives basic histogram built in base R
+
+p <- ggplot(data = df_sim_origintime, aes(x = sim_output)) + 
+  geom_histogram(binwidth = 4, color = "darkblue", fill = "lightblue") + 
+  geom_vline(xintercept = 131, color = "red") +
+  scale_x_reverse() + #seq in the -x axis
+  labs(title = "Origin Time Histogram", x = "Million of Years Ago", y= "Number of Samples") + #axis labels
+  theme(plot.title = element_text(hjust = 0.5)) #centers title
+```
+
+get the new shreya_foss_3 from loni!! saved on other computer
+```{r}
+#print(p) #to see your plot
+#ggsave(p, path = path you want) #save a copy
+```
+
+thoughts: SFBD input varies/person. it's in a for loop, need to know what to put where...is that even a problem? 
+
+
+
+
+
