@@ -9,3 +9,37 @@ I think the the next thing to try is to make these iterable. So, I'd like you to
 Either way, do about a hundred simulations and make a histogram of them. Add a vertical line to the histogram at 131 million years - the empirical value uncovered in Christina's work. This will give us a visual check on the simulations
 -get the origin for every hundred simulations
 -do that for the number of fossils too
+
+See the Part_4_CreateHistogramsSPEC. Rmd file on github or on the spec for the work
+
+Other stuff I tried, but didn't work
+```{r}
+#lapply(x = vector/list of values that input to the function, FUN = function applied to each element of x/resultFBD)
+```
+could use x = list of values from the resultFBD, function is modifiedsfrt 
+resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 1426, c(0, 61))
+
+
+Maybe I want to run the simulations a bunch of times first. Store those results in a dataframe.
+```{r}
+n <- 3
+lapply_result <- lapply(rep(1,n), resultFBD) #This won't work bc x is the input to the func
+```
+by creating a function that runs the simulation a bunch of times first
+store that in a data frame
+then apply the summary stat func to the data set...
+
+Just simulate trees a bunch of times first
+```{r}
+for(i in 1:3){
+  resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 1426, c(0, 61))
+  
+}
+
+multiple_sim <- function(x) {
+ #struggles
+}
+
+trial <- replicate(2, modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 1426, c(0, 61)))
+```
+#replicate ended up creating a list of 4 objects. Soooo not good, for when you apply tree max and need to do [[2]][[1]]
