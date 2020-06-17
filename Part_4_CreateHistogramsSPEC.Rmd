@@ -1,5 +1,5 @@
 ---
-title: "Part_4_CreateHistogram"
+title: "Part_4_THOUGHT_PROCESS"
 output: html_document
 ---
 I think the the next thing to try is to make these iterable. So, I'd like you to produce a histogram of origin times found in simulations
@@ -72,7 +72,7 @@ modifiedsfrt <- function (n, numbsim, lambda, mu, psi, times, complete = FALSE)
 }
 ```
 
-Use modified function sfrt to create func for our project (Part 2)
+Use modified function sfrt to create func for our project (P2)
 ```{r}
 modifiedSFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
   
@@ -91,13 +91,26 @@ modifiedSFBD <- function(n_extant, n_trees, df, lambda, mu, psi, row, mers){
   if(length(psi) == 1){
     p1 <- rep(df[row, psi], times = num)} else{
       p1 <- c()
-      for(i in psi){p1 <- append(p1, df[row, i])}} #add to p1
+      for(i in psi){p1 <- append(p1, df[row, i])}} #Add to p1
   
-  modelledfoss <- modifiedsfrt(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE) #using sfrt
+  modelledfoss <- modifiedsfrt(n_extant, n_trees, l1, m1, p1, times = mers, complete = TRUE) 
   return(modelledfoss)
 }
-#add for loop here!! See below stuff
-##resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 244, c(0, 61))
+#Add for loop here:
+#resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 12, c(0, 61))
+```
+
+Make a func to print out all three summary stats:
+```{r}
+combined_summary <- function(fossphylo, times) { #fossphylo- resulting fossil record and phylo obj from sfrt func.
+    
+    total_foss <- count.fossils(fossphylo[[1]])
+    interval_foss <- count.fossils.binned(fossphylo[[1]], times)
+    origin_time <-  tree.max(fossphylo[[2]][[1]])
+  
+    return(list(total_foss, interval_foss, origin_time)) #could also return as vector
+}
+summary <- combined_summary(resultFBD, c(0, 61)) 
 ```
 
 Game plan: 
@@ -126,12 +139,15 @@ df_sim_origintime <- data.frame(sim_output) #Put in data frame (to work for ggpl
 
 ```
 
+
 Incorporating fossil count, putting in one data frame (to see how the for loop works, see above chunk.). Basically removed the sim_output[i]
 ```{r}
 num_sims <- 3
-origin_time <- rep(NA, times = num_sims) #This creates a vector of num_sims NA values
-total_foss <- rep(NA, times = num_sims) 
 
+##origin_time <- rep(NA, times = num_sims) #This creates a vector of num_sims NA values
+##total_foss <- rep(NA, times = num_sims)
+origin_time <- c() #could also make an empty vector like this!
+total_foss <- c()
 
 for(i in 1:num_sims){
 
@@ -139,11 +155,11 @@ for(i in 1:num_sims){
   
   origin_time[i] <-  tree.max(resultFBD[[2]][[1]])
   total_foss[i] <- count.fossils(resultFBD[[1]])
-  
 }
 
 my_df <- data.frame(origin_time, total_foss) #Put in data frame (to work for ggplot)
 ```
+tried to add interval_foss too... problem. The output is a double (vector w specific length- in this case, two), which isn't saving to the vector
 
 
 Now to make the histogram
@@ -170,9 +186,110 @@ get the new shreya_foss_3 from loni!! saved on other computer
 #ggsave(p, path = path you want) #save a copy
 ```
 
-thoughts: SFBD input varies/person. it's in a for loop, need to know what to put where...is that even a problem? 
+thoughts: SFBD input varies/person. it's in a for loop, need to know what to put where...is that even a problem
+## doesn't make sense to make a histogram of count.fossils.binned right? Just gives you # of fossils measured between two intervals. x axis is what? number of fossils?...
+----------------------------------------------------------------------------------------------
+Other stuff I tried, but didn't work
+```{r}
+#lapply(x = vector/list of values that input to the function, FUN = function applied to each element of x/resultFBD)
+```
+could use x = list of values from the resultFBD, function is modifiedsfrt 
+
+Maybe I could run the simulations a bunch of times first. Store those results in a dataframe.
+```{r}
+n <- 3
+lapply_result <- lapply(rep(1,n), resultFBD) #This won't work bc x is the input to the func
+```
+by creating a function that runs the simulation a bunch of times first
+store that in a data frame
+then apply the summary stat func to the data set...
+
+Just simulate trees a bunch of times first
+```{r}
+trial <- replicate(2, modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), 1426, c(0, 61)))
+
+#Tried to put this in loop
+if (is.double(interval_trial) == TRUE) {
+       interval_trial[i] <- count.fossils.binned(applied_sfrt[[1]], c(0,61))
+       print(interval_trial[i])
+    } else {
+      print("oh no")
+    } #lol output oh no. Meaning interval[i] is not a double...
+```
+**replicate ended up creating a list of 4 objects- 1f, 2tree, 3f, 4tree. Soooo not good for when you apply tree max and need to do [[2]][[1]]
 
 
+```{r}
+multiple_sim <- function(timebins) {
+  
+  num_sims <- 3
+  origin_time <- c() #Instead of rep(NA, times = num_sims)
+  total_foss <- c() #vector("integer", length = 100)
+  #interval_foss <- c()
 
+  for(i in 1:num_sims){
+
+  resultFBD <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), row= 244, timebins)
+  
+  origin_time[i] <-  tree.max(resultFBD[[2]][[1]])
+  total_foss[i] <- count.fossils(resultFBD[[1]])
+ # interval_foss[i] <- count.fossils.binned(resultFBD[[1]], timebins) 
+  }
+  
+  create_df <- data.frame(origin_time, total_foss)#, interval_foss)
+
+  return(create_df)
+  
+}
+stats_df <- multiple_sim(c(0,61))
+
+
+```
+Interval_foss row gives error: number of items to replace is not a multiple of replacement length. maybe bc of the double value output. Only one of the two values is going into the create_df data frame. 
+Could try to return as a list?
+
+Getting interval_foss to work:
+```{r}
+#interval_trial <- rep(double(), times = 2)
+interval_trial <- vector('character', length=3)
+
+for (i in 1:2) {
+    applied_sfrt[i] <- modifiedSFBD(666, 1, mynewfoss, lambda = "lambda", mu = "mu", psi = c("psi.1.", "psi.2."), row= 244, c(0,61))
+    interval_trial <- count.fossils.binned(applied_sfrt[[1]], c(0,61))
+
+    
+  #  if(length(psi) == 1){
+   # p1 <- rep(df[row, psi], times = num)} else{
+    #  p1 <- c()
+     # for(i in psi){p1 <- append(p1, df[row, i])}} #Add to p1
+  
+
+}
+
+
+#try_interval <- data.frame(applied_sfrt)
+```
+
+
+##Accessing ggplot from data frame
+
+Histogram of origin time
+```{r}
+age <- ggplot(data = stats_df, aes(x = origin_time)) + 
+  geom_histogram(binwidth = 4, color = "darkblue", fill = "lightblue") + 
+  geom_vline(xintercept = 131, color = "red") +
+  scale_x_reverse() + #seq in the -x axis
+  labs(title = "Origin Time Histogram", x = "Million of Years Ago", y= "Number of Samples") + #axis labels
+  theme(plot.title = element_text(hjust = 0.5)) #centers title
+```
+
+Histogram of fossil count
+```{r}
+fossils <- ggplot(data = stats_df, aes(x = total_foss)) + 
+  geom_histogram(binwidth = 1, color = "darkblue", fill = "lightpink") + 
+  labs(title = "Total Fossil Count Histogram", x = "Number of Fossils", y= "Frequency") + #axis labels
+  theme(plot.title = element_text(hjust = 0.5)) #centers title
+print(fossils)
+```
 
 
