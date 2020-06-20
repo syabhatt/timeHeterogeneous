@@ -1,0 +1,25 @@
+---
+title: "Part_5_Fossils_Visualize"
+output: html_document
+---
+```{r}
+mynewfoss <- read.table("C:\\Users\\shrey\\Desktop\\WrightLab\\shreya_foss.log", head = TRUE)
+```
+
+names(mynewfoss): shows that yes, there are fossil columns. "fossil.1." goes on till 29.
+because theres 29 taxa. Also have corresponding t.1. to t.29.
+```{r}
+View(names(mynewfoss)) #find fossil.1. and other names
+View(mynewfoss$fossil.1.)
+
+```
+- all negative values in fossils.#
+
+Looked at the model_FBDP_TEFBD.Rev directory on gitbash: try to understand what these variables mean
+foss_int.tsv file is read to 'intervals', includes a taxon name, a min and max
+    fossil[i] is a uniform distribution of t[i]-min and t[i] - max
+    t[i] is: tmrca(fbd_tree, clade(taxon)). tmrca is to find the most recent common ancestor. arguments are the tree and clade value.
+    
+All this (fossil and t) were in one for loop, going from 1:intervals.size(). intervals reads the .tsv file, and the size/length of it is 29. hence, got 29 fossil.#. and t.#.
+
+
